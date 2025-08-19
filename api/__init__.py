@@ -42,7 +42,7 @@ class Main:
             # --- Bagian yang dimodifikasi untuk mencari Dailymotion ---
 
             # Cari elemen <option> dengan teks "Dailymotion [ADS]"
-            dailymotion_option = soup.find('option', string=re.compile(r'\s*Dailymotion \[ADS\]\s*'))
+            dailymotion_option = soup.find('option', string=re.compile(r'Dailymotion', re.IGNORECASE))
 
             if dailymotion_option:
                 # Ambil nilai dari atribut 'value'
