@@ -6,7 +6,7 @@ from .utils.home import Home
 from .utils.search import Search
 from .utils.genre import Genres
 from .utils.anime import Anime
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import base64
 import re
@@ -27,79 +27,58 @@ class Main:
         episode_page_url = f"https://anichin.moe/{slug}"
 
         try:
-            # Mengirim User-Agent untuk mensimulasikan browser
+            # Gunakan cloudscraper
+            scraper = cloudscraper.create_scraper()
+
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                            'AppleWebKit/537.36 (KHTML, like Gecko) '
+                            'Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://anichin.moe/',
+                'Accept-Language': 'en-US,en;q=0.9,id;q=0.8'
             }
-            response = requests.get(episode_page_url, headers=headers)
-            response.raise_for_status() # Akan mengeluarkan HTTPError untuk status 4xx/5xx
 
-            # Mengurai HTML menggunakan BeautifulSoup
+            response = scraper.get(episode_page_url, headers=headers)
+            response.raise_for_status()
+
+            # Parsing HTML
             soup = BeautifulSoup(response.text, 'html.parser')
-
             video_sources = []
 
-            # --- Bagian yang dimodifikasi untuk mencari Dailymotion ---
-
-            # Cari elemen <option> dengan teks "Dailymotion [ADS]"
+            # --- Cari Dailymotion ---
             dailymotion_option = soup.find('option', string=re.compile(r'Dailymotion', re.IGNORECASE))
 
             if dailymotion_option:
-                # Ambil nilai dari atribut 'value'
                 encoded_iframe = dailymotion_option.get('value')
-                
                 if encoded_iframe:
-                    try:
-                        # Dekode string Base64
-                        # Pastikan string Base64 memiliki padding yang benar jika diperlukan
-                        decoded_iframe_bytes = base64.b64decode(encoded_iframe + '===') # Tambahkan padding potensial
-                        decoded_iframe_html = decoded_iframe_bytes.decode('utf-8')
-                        
-                        # Parsing string HTML yang sudah didekode
-                        iframe_soup = BeautifulSoup(decoded_iframe_html, 'html.parser')
-                        dailymotion_iframe = iframe_soup.find('iframe')
-                        
-                        if dailymotion_iframe and 'src' in dailymotion_iframe.attrs:
-                            dailymotion_link = dailymotion_iframe['src']
-                            video_sources.append({
-                                'name': 'Dailymotion [ADS]', # Nama sumber video
-                                'url': dailymotion_link,
-                                'type': 'iframe_embed'
-                            })
-                            print(f"Link Dailymotion yang ditemukan: {dailymotion_link}")
-                        else:
-                            print("Tidak dapat menemukan tag iframe atau atribut src dalam dekode HTML Dailymotion.")
-                    except base64.binascii.Error as be:
-                        print(f"Error dekode Base64 untuk Dailymotion: {be}. String: {encoded_iframe}")
-                    except Exception as e:
-                        print(f"Error saat memproses link Dailymotion: {e}")
-                else:
-                    print("Atribut 'value' untuk opsi Dailymotion kosong.")
-            else:
-                print("Tidak ditemukan opsi Dailymotion [ADS] dalam HTML. Mencoba mencari OK.ru sebagai fallback.")
-                # Fallback ke pencarian iframe OK.ru jika Dailymotion tidak ditemukan
-                iframe_tag = soup.find('iframe', src=lambda s: s and 'ok.ru/videoembed' in s)
-                if iframe_tag and 'src' in iframe_tag.attrs:
-                    video_url = iframe_tag['src']
-                    video_sources.append({
-                        'name': 'OK.ru Embed', # Nama sumber video
-                        'url': video_url,
-                        'type': 'iframe_embed'
-                    })
-                    print(f"Link OK.ru ditemukan sebagai fallback: {video_url}")
-                else:
-                    print("Tidak menemukan tag iframe OK.ru dengan atribut 'src' yang valid.")
+                    decoded_iframe_html = base64.b64decode(encoded_iframe + "===").decode("utf-8")
+                    iframe_soup = BeautifulSoup(decoded_iframe_html, "html.parser")
+                    dailymotion_iframe = iframe_soup.find("iframe")
 
-            # Mengembalikan data dalam format yang diharapkan oleh frontend Anda
+                    if dailymotion_iframe and "src" in dailymotion_iframe.attrs:
+                        dailymotion_link = dailymotion_iframe["src"]
+                        video_sources.append({
+                            "name": "Dailymotion [ADS]",
+                            "url": dailymotion_link,
+                            "type": "iframe_embed"
+                        })
+
+            # --- Fallback OK.ru ---
+            if not video_sources:
+                iframe_tag = soup.find("iframe", src=lambda s: s and "ok.ru/videoembed" in s)
+                if iframe_tag and "src" in iframe_tag.attrs:
+                    video_sources.append({
+                        "name": "OK.ru Embed",
+                        "url": iframe_tag["src"],
+                        "type": "iframe_embed"
+                    })
+
             return {"sources": video_sources}
 
-        except requests.exceptions.RequestException as e:
-            print(f"Error saat mengambil dari Anichin: {e}")
-            raise # Angkat exception ini agar ditangkap di main.py dan diubah menjadi string
-
         except Exception as e:
-            print(f"Error umum saat parsing HTML untuk video source: {e}")
-            raise # Angkat exception ini agar ditangkap di main.py dan diubah menjadi string
+            print(f"Error saat mengambil dari Anichin: {e}")
+            raise
+
 
     def get_episode(self, slug):
         return Episode(slug).to_json()
