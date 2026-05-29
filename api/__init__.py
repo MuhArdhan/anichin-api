@@ -45,25 +45,48 @@ class Main:
             soup = BeautifulSoup(response.text, 'html.parser')
             video_sources = []
 
-            # --- Cari Dailymotion ---
-            dailymotion_option = soup.find('option', string=re.compile(r'Dailymotion', re.IGNORECASE))
+            # Prioritas pencarian server
+            priority_servers = [
+                r'D-Tube',
+                r'Rumble',
+                r'Dailymotion',
+                r'OK\.ru',
+                r'RPMShare',
+                r'Streamruby',
+                r'New Player',
+                r'Mega',
+                r'Doods'
+            ]
 
-            if dailymotion_option:
-                encoded_iframe = dailymotion_option.get('value')
-                if encoded_iframe:
-                    decoded_iframe_html = base64.b64decode(encoded_iframe + "===").decode("utf-8")
-                    iframe_soup = BeautifulSoup(decoded_iframe_html, "html.parser")
-                    dailymotion_iframe = iframe_soup.find("iframe")
+            options = soup.find_all('option')
+            
+            for server_pattern in priority_servers:
+                for option in options:
+                    if option.text and re.search(server_pattern, option.text, re.IGNORECASE):
+                        encoded_iframe = option.get('value')
+                        if encoded_iframe:
+                            # Penanganan padding base64
+                            padding = 4 - (len(encoded_iframe) % 4)
+                            if padding < 4:
+                                encoded_iframe += "=" * padding
+                            try:
+                                decoded_iframe_html = base64.b64decode(encoded_iframe).decode("utf-8")
+                                iframe_soup = BeautifulSoup(decoded_iframe_html, "html.parser")
+                                iframe = iframe_soup.find("iframe")
 
-                    if dailymotion_iframe and "src" in dailymotion_iframe.attrs:
-                        dailymotion_link = dailymotion_iframe["src"]
-                        video_sources.append({
-                            "name": "Dailymotion [ADS]",
-                            "url": dailymotion_link,
-                            "type": "iframe_embed"
-                        })
+                                if iframe and "src" in iframe.attrs:
+                                    link = iframe["src"]
+                                    # Hindari duplikasi URL
+                                    if not any(s['url'] == link for s in video_sources):
+                                        video_sources.append({
+                                            "name": option.text.strip(),
+                                            "url": link,
+                                            "type": "iframe_embed"
+                                        })
+                            except Exception as decode_err:
+                                print(f"Decode error for {option.text}: {decode_err}")
 
-            # --- Fallback OK.ru ---
+            # --- Fallback OK.ru dari DOM langsung jika tidak ada di option ---
             if not video_sources:
                 iframe_tag = soup.find("iframe", src=lambda s: s and "ok.ru/videoembed" in s)
                 if iframe_tag and "src" in iframe_tag.attrs:
