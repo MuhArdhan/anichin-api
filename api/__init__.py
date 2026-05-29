@@ -47,8 +47,8 @@ class Main:
 
             # Prioritas pencarian server
             priority_servers = [
-                r'D-Tube',
                 r'Rumble',
+                r'D-Tube',
                 r'Dailymotion',
                 r'OK\.ru',
                 r'RPMShare',
