@@ -58,12 +58,20 @@ class Main:
                 r'Doods'
             ]
 
-            options = soup.find_all('option')
+            # Mengumpulkan server dari tag <option> (website asli) dan <a> (website clone)
+            available_servers = []
             
+            for option in soup.find_all('option'):
+                if option.text and option.get('value'):
+                    available_servers.append((option.text.strip(), option.get('value')))
+            
+            for btn in soup.select('.server-item a'):
+                if btn.text and btn.get('data-hash'):
+                    available_servers.append((btn.text.strip(), btn.get('data-hash')))
+
             for server_pattern in priority_servers:
-                for option in options:
-                    if option.text and re.search(server_pattern, option.text, re.IGNORECASE):
-                        encoded_iframe = option.get('value')
+                for server_name, encoded_iframe in available_servers:
+                    if re.search(server_pattern, server_name, re.IGNORECASE):
                         if encoded_iframe:
                             # Penanganan padding base64
                             padding = 4 - (len(encoded_iframe) % 4)
@@ -79,12 +87,12 @@ class Main:
                                     # Hindari duplikasi URL
                                     if not any(s['url'] == link for s in video_sources):
                                         video_sources.append({
-                                            "name": option.text.strip(),
+                                            "name": server_name,
                                             "url": link,
                                             "type": "iframe_embed"
                                         })
                             except Exception as decode_err:
-                                print(f"Decode error for {option.text}: {decode_err}")
+                                print(f"Decode error for {server_name}: {decode_err}")
 
             # --- Fallback OK.ru dari DOM langsung jika tidak ada di option ---
             if not video_sources:
