@@ -24,7 +24,7 @@ class Main:
 
     def get_video_source(self, slug):
         # URL halaman episode di Anichin
-        episode_page_url = f"https://anichin.moe/{slug}"
+        episode_page_url = f"https://anichin.ro/{slug}"
 
         try:
             # Gunakan cloudscraper
@@ -34,7 +34,7 @@ class Main:
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                             'AppleWebKit/537.36 (KHTML, like Gecko) '
                             'Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://anichin.moe/',
+                'Referer': 'https://anichin.ro/',
                 'Accept-Language': 'en-US,en;q=0.9,id;q=0.8'
             }
 

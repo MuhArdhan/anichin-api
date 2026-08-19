@@ -185,7 +185,7 @@ def proxy_video():
         target_referer = "https://www.dailymotion.com/"
     else:
         # Fallback, bisa jadi domain Anichin.moe atau domain default lain
-        target_referer = "https://anichin.moe/" 
+        target_referer = "https://anichin.ro/" 
     
     headers_to_send_to_source = {
         'Referer': target_referer,
