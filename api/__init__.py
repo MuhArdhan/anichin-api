@@ -10,6 +10,8 @@ import cloudscraper
 from bs4 import BeautifulSoup
 import base64
 import re
+import os
+from dotenv import load_dotenv
 
 
 load_dotenv()
@@ -24,7 +26,8 @@ class Main:
 
     def get_video_source(self, slug):
         # URL halaman episode di Anichin
-        episode_page_url = f"https://anichin.ro/{slug}"
+        host = os.getenv('HOST', 'https://anichin.moe').rstrip('/')
+        episode_page_url = f"{host}/{slug.lstrip('/')}"
 
         try:
             # Gunakan cloudscraper
